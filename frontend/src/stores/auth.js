@@ -3,15 +3,49 @@ import { reactive, computed } from 'vue'
 import api from '@/api/axios'
 
 const state = reactive({
-  access: localStorage.getItem('access'),
-  refresh: localStorage.getItem('refresh'),
+  access: null,
+  refresh: null,
   user: null,
+  loaded: false,
 })
 
 const isAuthenticated = computed(() => !!state.access)
 
+function loadFromStorage() {
+  const access = localStorage.getItem('access')
+  const refresh = localStorage.getItem('refresh')
+
+  state.access = access || null
+  state.refresh = refresh || null
+}
+
+async function fetchMe() {
+  if (!state.access) {
+    state.user = null
+    return
+  }
+
+  try {
+    const res = await api.get('auth/me/')
+    state.user = res.data
+  } catch (error) {
+    console.error('내 정보 가져오기 실패, 토큰 정리:', error)
+    // 토큰이 만료/이상하면 정리
+    logout()
+  }
+}
+
+async function initAuth() {
+  loadFromStorage()
+  if (state.access) {
+    await fetchMe()
+  }
+  state.loaded = true
+}
+
 async function login(username, password) {
   const res = await api.post('auth/login/', { username, password })
+
   state.access = res.data.access
   state.refresh = res.data.refresh
 
@@ -19,16 +53,6 @@ async function login(username, password) {
   localStorage.setItem('refresh', state.refresh)
 
   await fetchMe()
-}
-
-async function fetchMe() {
-  if (!state.access) return
-  try {
-    const res = await api.get('auth/me/')
-    state.user = res.data
-  } catch (error) {
-    console.error('내 정보 가져오기 실패:', error)
-  }
 }
 
 function logout() {
@@ -39,18 +63,13 @@ function logout() {
   localStorage.removeItem('refresh')
 }
 
-async function register(username, password) {
-  await api.post('auth/register/', { username, password })
-  // 회원가입 후 바로 로그인 시켜도 되고, 로그인 페이지로 보내도 되고
-}
-
 export function useAuth() {
   return {
     state,
     isAuthenticated,
+    initAuth,
     login,
     logout,
-    register,
     fetchMe,
   }
 }

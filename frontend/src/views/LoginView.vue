@@ -22,10 +22,6 @@
       </form>
 
       <p class="error" v-if="error">{{ error }}</p>
-
-      <p class="hint">
-        아직 계정이 없다면, 나중에 회원가입 페이지도 추가할 수 있어요 🙂
-      </p>
     </div>
   </div>
 </template>
@@ -46,18 +42,18 @@ const onSubmit = async () => {
   error.value = ''
   try {
     await auth.login(username.value, password.value)
-    await auth.fetchMe()
-    router.push('/')   // 로그인 후 홈으로
+    router.push('/')
   } catch (e) {
-    console.error(e)
+    console.error('로그인 에러:', e)
     error.value = '로그인에 실패했습니다. 아이디/비밀번호를 확인해 주세요.'
   }
 }
 </script>
 
+
 <style scoped>
 .page {
-  padding-top: 80px;
+  padding-top: 80px;          /* 네비바 높이만큼 */
   display: flex;
   justify-content: center;
 }
@@ -103,11 +99,5 @@ button {
   margin-top: 10px;
   color: #ff8080;
   font-size: 14px;
-}
-
-.hint {
-  margin-top: 14px;
-  font-size: 12px;
-  opacity: 0.8;
 }
 </style>

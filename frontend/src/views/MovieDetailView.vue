@@ -11,22 +11,54 @@
     <!-- ✅ 1. 상세 영역 -->
     <div class="detail-hero">
       <div class="poster">
-        <img :src="`http://127.0.0.1:8000${movie.poster_url}`" alt="" />
+        <img :src="posterSrc" />
       </div>
 
       <div class="info">
         <h1>{{ movie.title }}</h1>
-        <p class="meta">
-          {{ movie.release_year }} · {{ movie.country }}
-        </p>
+        <p class="meta">{{ movie.release_year }} · {{ movie.country }}</p>
+
+        <!-- ✅ 장르 태그 -->
+        <div class="genre-chips" v-if="movie.genres?.length">
+          <span
+            v-for="genre in movie.genres"
+            :key="genre.id"
+            class="chip"
+          >
+            {{ genre.name }}
+          </span>
+        </div>
+
+        <!-- ✅ 감독/배우 정보 -->
+        <div class="people" v-if="directors.length || actors.length">
+          <p v-if="directors.length">
+            <strong>감독</strong>
+            <span
+              v-for="d in directors"
+              :key="d.id"
+              class="person-name"
+            >
+              {{ d.person.name }}
+            </span>
+          </p>
+
+          <p v-if="actors.length">
+            <strong>출연</strong>
+            <span
+              v-for="a in actors"
+              :key="a.id"
+              class="person-name"
+            >
+              {{ a.person.name }}
+              <span v-if="a.character_name"> ({{ a.character_name }})</span>
+            </span>
+          </p>
+        </div>
 
         <RatingStar v-model="myRating" />
-        <WatchButtons />
+        <WatchButtons :movie-id="movie.id" />
 
-        <!-- 기존 overview -->
-        <p class="overview">
-          {{ movie.overview }}
-        </p>
+        <p class="overview">{{ movie.overview }}</p>
 
         <!-- ✅ 리뷰 작성 + 목록 -->
         <ReviewForm
@@ -40,6 +72,7 @@
         />
 
       </div>
+  
     </div>
 
     <!-- ✅ 2. 아래에 비슷한 영화 -->
@@ -58,7 +91,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import ReviewForm from '@/components/review/ReviewForm.vue'
 import ReviewList from '@/components/review/ReviewList.vue'
@@ -68,6 +101,23 @@ import TheNavbar from '@/components/layout/TheNavbar.vue'
 import RatingStar from '@/components/movie/RatingStar.vue'
 import WatchButtons from '@/components/movie/WatchButtons.vue'
 import api from '@/api/axios'
+
+const directors = computed(() =>
+  movie.value?.casts?.filter((c) => c.role === 'director') ?? []
+)
+
+const actors = computed(() =>
+  movie.value?.casts?.filter((c) => c.role === 'actor') ?? []
+)
+const posterSrc = computed(() => {
+  if (!movie.value || !movie.value.poster_url) return ''
+  const url = movie.value.poster_url
+  if (url.startsWith('http')) return url
+  return `http://127.0.0.1:8000${url}`
+})
+
+
+
 const reviewsReloadKey = ref(0)
 const onReviewCreated = () => {
   reviewsReloadKey.value++
@@ -137,4 +187,33 @@ onMounted(async () => {
 .similar-section {
   padding: 40px 0;
 }
+.genre-chips {
+  margin-top: 8px;
+  margin-bottom: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #262626;
+  font-size: 12px;
+}
+
+.people {
+  margin-top: 8px;
+  margin-bottom: 12px;
+  font-size: 13px;
+}
+
+.people p {
+  margin: 2px 0;
+}
+
+.person-name + .person-name::before {
+  content: ' · ';
+}
+
 </style>

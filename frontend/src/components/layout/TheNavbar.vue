@@ -11,12 +11,16 @@
     <div class="right">
       <span class="icon">🔍</span>
 
-      <!-- 로그인 안 되어 있을 때 -->
-      <RouterLink v-if="!auth.isAuthenticated" to="/login" class="login-link">
+      <!-- 로그인 안 된 상태 -->
+      <RouterLink
+        v-if="!auth.isAuthenticated"
+        to="/login"
+        class="login-link"
+      >
         로그인
       </RouterLink>
 
-      <!-- 로그인 되어 있을 때 -->
+      <!-- 로그인 된 상태 -->
       <div v-else class="user-area">
         <span class="username">{{ auth.state.user?.username || '유저' }}</span>
         <button @click="onLogout">로그아웃</button>
@@ -42,6 +46,7 @@ const onLogout = () => {
 }
 </script>
 
+
 <style scoped>
 .nav {
   height: 60px;
@@ -56,6 +61,11 @@ const onLogout = () => {
   left: 0;
   right: 0;
   z-index: 50;
+}
+
+.logo {
+  font-weight: bold;
+  cursor: pointer;
 }
 
 .menu {

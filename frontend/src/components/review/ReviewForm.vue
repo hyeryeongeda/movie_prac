@@ -47,9 +47,10 @@ const submitReview = async () => {
 
     author.value = ''
     content.value = ''
-    emit('created')   // 부모에게 "새로 만들었어!" 신호 보내기
+    emit('created')   // 부모에게 "새 리뷰 만들어짐" 알림
   } catch (error) {
     console.error('리뷰 작성 실패:', error)
+    alert('리뷰 작성에 실패했습니다.')
   }
 }
 </script>
@@ -59,11 +60,9 @@ const submitReview = async () => {
   margin-top: 30px;
   margin-bottom: 20px;
 }
-
 .row {
   margin-bottom: 8px;
 }
-
 input,
 textarea {
   width: 100%;
@@ -73,7 +72,6 @@ textarea {
   background: #111;
   color: white;
 }
-
 button {
   margin-top: 6px;
   padding: 8px 14px;

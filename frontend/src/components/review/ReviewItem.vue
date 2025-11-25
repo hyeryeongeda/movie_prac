@@ -5,6 +5,9 @@
       <span class="date">{{ formattedDate }}</span>
     </div>
     <p class="content">{{ review.content }}</p>
+    <div class="meta">
+      <span>좋아요 {{ review.like_count ?? 0 }}개</span>
+    </div>
   </div>
 </template>
 
@@ -29,24 +32,25 @@ const formattedDate = computed(() => {
   padding: 10px 0;
   border-bottom: 1px solid #333;
 }
-
 .top {
   display: flex;
   justify-content: space-between;
   margin-bottom: 4px;
 }
-
 .author {
   font-size: 14px;
 }
-
 .date {
   font-size: 12px;
   opacity: 0.7;
 }
-
 .content {
   font-size: 14px;
   line-height: 1.4;
+}
+.meta {
+  margin-top: 4px;
+  font-size: 12px;
+  opacity: 0.8;
 }
 </style>

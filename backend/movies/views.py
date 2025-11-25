@@ -1,17 +1,28 @@
 # movies/views.py
+from django.shortcuts import get_object_or_404
+from django.contrib.auth import get_user_model
+
 from rest_framework import generics, status, permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from django.shortcuts import get_object_or_404
-from django.contrib.auth.models import User
 
 from .models import Movie, Rating, Review, WatchList, LikeReview
 from .serializers import (
     MovieListSerializer, MovieDetailSerializer,
-    RatingSerializer, ReviewSerializer, WatchListSerializer, MovieSerializer,UserSerializer,
-    UserRegisterSerializer,
+    RatingSerializer, ReviewSerializer, WatchListSerializer,
+    MovieSerializer, UserSerializer, UserRegisterSerializer, WatchListItemSerializer,
 )
 
+User = get_user_model()
+def get_dummy_user():
+    # 임시용: DB에 존재하는 첫 번째 유저를 사용
+    # (admin 계정 하나는 꼭 있어야 함!)
+    return User.objects.first()
+
+
+# ─────────────────────────────────────────────
+# 영화 목록 / 상세
+# ─────────────────────────────────────────────
 
 class MovieListAPIView(generics.ListAPIView):
     queryset = Movie.objects.all().order_by('-id')
@@ -29,52 +40,57 @@ class MovieDetailAPIView(generics.RetrieveAPIView):
         return context
 
 
+# ─────────────────────────────────────────────
+# 평점 생성/수정
+# ─────────────────────────────────────────────
+
 class RatingCreateUpdateAPIView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request, movie_pk):
         movie = get_object_or_404(Movie, pk=movie_pk)
         score = request.data.get('score')
+
         rating, created = Rating.objects.update_or_create(
             user=request.user,
             movie=movie,
             defaults={'score': score},
         )
         serializer = RatingSerializer(rating)
-        return Response(serializer.data, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
+        return Response(
+            serializer.data,
+            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
+        )
 
 
-class ReviewListCreateAPIView(APIView):
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+# ─────────────────────────────────────────────
+# 리뷰 목록 / 생성 (익명 닉네임 + 내용)
+# ─────────────────────────────────────────────
 
-    def get(self, request, movie_pk):
-        reviews = Review.objects.filter(movie_id=movie_pk).select_related('user')
-        serializer = ReviewSerializer(reviews, many=True)
-        return Response(serializer.data)
+class ReviewListCreateAPIView(generics.ListCreateAPIView):
+    """
+    GET  /api/v1/movies/<movie_id>/reviews/
+    POST /api/v1/movies/<movie_id>/reviews/
+      body: { "author": "닉네임", "content": "내용" }
+    """
+    serializer_class = ReviewSerializer
+    # ✅ 로그인 안 해도 작성 가능하게 풀기 (임시)
+    permission_classes = [permissions.AllowAny]
 
-    def post(self, request, movie_pk):
-        movie = get_object_or_404(Movie, pk=movie_pk)
-        serializer = ReviewSerializer(data=request.data)
-        if serializer.is_valid(raise_exception=True):
-            serializer.save(user=request.user, movie=movie)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+    def get_queryset(self):
+        movie_id = self.kwargs['movie_id']
+        return Review.objects.filter(movie_id=movie_id).order_by('-created_at')
+
+    def perform_create(self, serializer):
+        movie_id = self.kwargs['movie_id']
+        # Review 모델에 user 필드 없으니까 movie 만 저장
+        serializer.save(movie_id=movie_id)
 
 
-class ReviewDetailAPIView(APIView):
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
-    def put(self, request, review_pk):
-        review = get_object_or_404(Review, pk=review_pk, user=request.user)
-        serializer = ReviewSerializer(review, data=request.data, partial=True)
-        if serializer.is_valid(raise_exception=True):
-            serializer.save()
-            return Response(serializer.data)
-
-    def delete(self, request, review_pk):
-        review = get_object_or_404(Review, pk=review_pk, user=request.user)
-        review.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
+# ─────────────────────────────────────────────
+# 리뷰 좋아요 토글
+# ─────────────────────────────────────────────
 
 class ReviewLikeToggleAPIView(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -86,16 +102,24 @@ class ReviewLikeToggleAPIView(APIView):
             user=request.user,
         )
         if not created:
-            # 이미 있으면 토글 off
             like.delete()
             liked = False
         else:
             liked = True
-        return Response({'liked': liked, 'like_count': review.likes.count()})
 
+        return Response({
+            'liked': liked,
+            'like_count': review.likes.count(),
+        })
+
+
+# ─────────────────────────────────────────────
+# 보고싶어요 / 봤어요 토글
+# ─────────────────────────────────────────────
 
 class WatchListToggleAPIView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    # ✅ 로그인 없어도 되게 임시 허용
+    permission_classes = [permissions.AllowAny]
 
     def post(self, request, movie_pk):
         """
@@ -104,8 +128,20 @@ class WatchListToggleAPIView(APIView):
         movie = get_object_or_404(Movie, pk=movie_pk)
         status_value = request.data.get('status', 'WANT')
 
+        # ✅ 로그인 안 되어 있으면 dummy 유저 사용
+        if request.user.is_authenticated:
+            user = request.user
+        else:
+            user = get_dummy_user()
+
+        if user is None:
+            return Response(
+                {'detail': '임시 유저가 없습니다. admin 계정 하나만 먼저 만들어 주세요.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         watch, created = WatchList.objects.update_or_create(
-            user=request.user,
+            user=user,
             movie=movie,
             defaults={'status': status_value},
         )
@@ -114,27 +150,23 @@ class WatchListToggleAPIView(APIView):
 
 
 
+# ─────────────────────────────────────────────
+# 비슷한 영화 (나라 기준 간단 추천)
+# ─────────────────────────────────────────────
+
 class SimilarMovieAPIView(generics.ListAPIView):
     serializer_class = MovieSerializer
 
     def get_queryset(self):
         movie_id = self.kwargs['movie_id']
         movie = Movie.objects.get(id=movie_id)
-
-        # 간단히: 같은 country 영화 추천 (자기 자신 제외)
         return Movie.objects.filter(country=movie.country).exclude(id=movie.id)
 
-class ReviewListCreateAPIView(generics.ListCreateAPIView):
-    serializer_class = ReviewSerializer
 
-    def get_queryset(self):
-        movie_id = self.kwargs['movie_id']
-        return Review.objects.filter(movie_id=movie_id)
+# ─────────────────────────────────────────────
+# 회원가입 / 내 정보
+# ─────────────────────────────────────────────
 
-    def perform_create(self, serializer):
-        movie_id = self.kwargs['movie_id']
-        serializer.save(movie_id=movie_id)
-        
 class RegisterAPIView(generics.CreateAPIView):
     queryset = User.objects.all()
     serializer_class = UserRegisterSerializer
@@ -147,3 +179,25 @@ class MeAPIView(APIView):
     def get(self, request):
         serializer = UserSerializer(request.user)
         return Response(serializer.data)
+
+class MyWatchListAPIView(generics.ListAPIView):
+    """
+    GET /api/v1/watchlist/me/
+    임시: 로그인 안 되어 있으면 dummy 유저 기준으로 조회
+    """
+    serializer_class = WatchListItemSerializer
+    permission_classes = [permissions.AllowAny]
+
+    def get_queryset(self):
+        if self.request.user.is_authenticated:
+            user = self.request.user
+        else:
+            user = get_dummy_user()
+
+        if user is None:
+            return WatchList.objects.none()
+
+        return WatchList.objects.filter(
+            user=user
+        ).select_related('movie').order_by('-created_at')
+

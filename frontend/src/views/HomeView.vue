@@ -2,11 +2,7 @@
   <TheNavbar />
 
   <!-- 히어로 영역 -->
-  <div
-    class="hero"
-    v-if="heroMovie"
-    :style="{ backgroundImage: `url(http://127.0.0.1:8000${heroMovie.poster_url})` }"
-  >
+ <div class="hero" v-if="heroMovie":style="heroBgStyle">
     <div class="hero-content">
       <h1>{{ heroMovie.title }}</h1>
       <p>{{ heroMovie.overview }}</p>
@@ -38,11 +34,23 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import TheNavbar from '@/components/layout/TheNavbar.vue'
 import MovieRow from '@/components/movie/MovieRow.vue'
 import api from '@/api/axios'
+import { ref, onMounted, computed } from 'vue'
+
+const heroBgStyle = computed(() => {
+  if (!heroMovie.value || !heroMovie.value.poster_url) {
+    return {}
+  }
+  const url = heroMovie.value.poster_url
+  const finalUrl = url.startsWith('http') ? url : `http://127.0.0.1:8000${url}`
+  return {
+    backgroundImage: `url(${finalUrl})`,
+  }
+})
+
 
 const movies = ref([])
 const heroMovie = ref(null)

@@ -1,8 +1,8 @@
-# movies/models.py
 from django.db import models
 from django.conf import settings
 
 User = settings.AUTH_USER_MODEL  # 커스텀 User 고려
+
 
 class TimeStampedModel(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
@@ -102,7 +102,6 @@ class Rating(TimeStampedModel):
         return f'{self.user} - {self.movie} ({self.score})'
 
 
-
 class Review(models.Model):
     movie = models.ForeignKey('Movie', on_delete=models.CASCADE, related_name='reviews')
     author = models.CharField(max_length=50, blank=True)   # 닉네임 (로그인 붙이면 User FK로 바꿔도 됨)
@@ -116,9 +115,9 @@ class Review(models.Model):
         return f'{self.movie.title} - {self.author}'
 
 
-
 class LikeReview(TimeStampedModel):
-    review = models.ForeignKey(Review, on_delete=models.CASCADE, related_name='likes')
+    # ⚠️ 문자열로 'movies.Review' 를 명시해서 앱 레지스트리 문제 방지
+    review = models.ForeignKey('movies.Review', on_delete=models.CASCADE, related_name='likes')
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='liked_reviews')
 
     class Meta:

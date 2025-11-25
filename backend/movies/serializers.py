@@ -1,7 +1,5 @@
-# movies/serializers.py
-from django.contrib.auth.models import User
-from rest_framework import serializers
 from django.contrib.auth import get_user_model
+from rest_framework import serializers
 from .models import (
     Movie, Genre, Person, MovieGenre, MovieCast,
     Rating, Review, LikeReview, WatchList
@@ -49,7 +47,7 @@ class MovieDetailSerializer(serializers.ModelSerializer):
     casts = MovieCastSerializer(many=True, read_only=True)
     avg_score = serializers.FloatField(read_only=True)
 
-    # 현재 로그인 유저의 평점/워치리스트 상태는 View에서 context로 넣어서 처리할 수도 있음
+    # 현재 로그인 유저의 평점/워치리스트 상태
     user_score = serializers.SerializerMethodField()
     is_in_watchlist = serializers.SerializerMethodField()
 
@@ -72,17 +70,17 @@ class MovieDetailSerializer(serializers.ModelSerializer):
         )
 
     def get_user_score(self, obj):
-        user = self.context['request'].user
-        if user.is_anonymous:
+        request = self.context.get('request')
+        if not request or request.user.is_anonymous:
             return None
-        rating = obj.ratings.filter(user=user).first()
+        rating = obj.ratings.filter(user=request.user).first()
         return float(rating.score) if rating else None
 
     def get_is_in_watchlist(self, obj):
-        user = self.context['request'].user
-        if user.is_anonymous:
+        request = self.context.get('request')
+        if not request or request.user.is_anonymous:
             return False
-        return obj.watchlist_entries.filter(user=user).exists()
+        return obj.watchlist_entries.filter(user=request.user).exists()
 
 
 class RatingSerializer(serializers.ModelSerializer):
@@ -93,7 +91,7 @@ class RatingSerializer(serializers.ModelSerializer):
 
 
 class ReviewSerializer(serializers.ModelSerializer):
-    user_nickname = serializers.CharField(source='user.nickname', read_only=True)
+    # LikeReview 에서 related_name='likes' 이므로 사용 가능
     like_count = serializers.IntegerField(source='likes.count', read_only=True)
 
     class Meta:
@@ -101,22 +99,12 @@ class ReviewSerializer(serializers.ModelSerializer):
         fields = (
             'id',
             'movie',
-            'user',
-            'user_nickname',
+            'author',
             'content',
-            'spoiler',
             'like_count',
             'created_at',
-            'updated_at',
         )
-        read_only_fields = ('user', 'movie', 'created_at', 'updated_at')
-
-
-class WatchListSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = WatchList
-        fields = ('id', 'movie', 'user', 'status', 'created_at')
-        read_only_fields = ('user', 'movie', 'created_at')
+        read_only_fields = ('movie', 'created_at')
 
 class MovieSerializer(serializers.ModelSerializer):
     # 비슷한 영화 추천용: 간단 카드용 데이터
@@ -134,13 +122,20 @@ class MovieSerializer(serializers.ModelSerializer):
             'avg_score',
         )
 
-
-
-class ReviewSerializer(serializers.ModelSerializer):
+class WatchListSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Review
-        fields = ('id', 'movie', 'author', 'content', 'created_at')
-        read_only_fields = ('id', 'movie', 'created_at')
+        model = WatchList
+        fields = ('id', 'movie', 'user', 'status', 'created_at')
+        read_only_fields = ('user', 'movie', 'created_at')
+
+# ✅ 마이페이지용: 영화 정보까지 같이 주는 시리얼라이저
+class WatchListItemSerializer(serializers.ModelSerializer):
+    movie = MovieSerializer(read_only=True)
+
+    class Meta:
+        model = WatchList
+        fields = ('id', 'movie', 'status', 'created_at')
+        
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User

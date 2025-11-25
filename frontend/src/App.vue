@@ -9,6 +9,14 @@
 </script>
 
 <style>
-/* 전역 스타일은 main.css에서 관리하니 여기선 비워둬도 됨 */
+#app {
+  width: 100%;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  background: #141414;
+}
 </style>
+
+
 

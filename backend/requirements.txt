@@ -10,8 +10,10 @@ cycler==0.12.1
 decorator==5.2.1
 distro==1.9.0
 Django==5.2.6
+django-cors-headers==4.9.0
 django-extensions==4.1
 djangorestframework==3.16.1
+djangorestframework_simplejwt==5.5.1
 executing==2.2.1
 fonttools==4.60.1
 h11==0.16.0
@@ -37,6 +39,7 @@ pure_eval==0.2.3
 pydantic==2.11.9
 pydantic_core==2.33.2
 Pygments==2.19.2
+PyJWT==2.10.1
 pyparsing==3.2.5
 python-dateutil==2.9.0.post0
 pytz==2025.2

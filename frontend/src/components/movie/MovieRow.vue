@@ -80,7 +80,7 @@ const scrollRight = () => {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  background: rgba(0,0,0,0.6);
+  background: #141414;
   border: none;
   color: white;
   font-size: 22px;

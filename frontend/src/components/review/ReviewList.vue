@@ -52,6 +52,7 @@ watch(() => props.reloadKey, fetchReviews)
 <style scoped>
 .review-list {
   margin-top: 10px;
+  color: white;
 }
 .review-list h3 {
   margin-bottom: 10px;
