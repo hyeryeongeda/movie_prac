@@ -22,7 +22,7 @@
 
       <!-- 로그인 된 상태 -->
       <div v-else class="user-area">
-        <span class="username">{{ auth.state.user?.username || '유저' }}</span>
+        <span class="username">{{ auth.state.user?.username }}</span>
         <button @click="onLogout">로그아웃</button>
       </div>
     </div>
@@ -30,11 +30,17 @@
 </template>
 
 <script setup>
+import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuth } from '@/stores/auth'
 
 const router = useRouter()
 const auth = useAuth()
+
+// ⭐⭐ 가장 중요한 부분 — state.user 초기화 ⭐⭐
+onMounted(() => {
+  auth.initAuth()
+})
 
 const goHome = () => {
   router.push('/')
@@ -45,6 +51,7 @@ const onLogout = () => {
   router.push('/')
 }
 </script>
+
 
 
 <style scoped>

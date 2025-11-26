@@ -91,65 +91,81 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, watch, computed } from 'vue'
 import { useRoute } from 'vue-router'
-import ReviewForm from '@/components/review/ReviewForm.vue'
-import ReviewList from '@/components/review/ReviewList.vue'
-
 import MovieRow from '@/components/movie/MovieRow.vue'
 import TheNavbar from '@/components/layout/TheNavbar.vue'
 import RatingStar from '@/components/movie/RatingStar.vue'
 import WatchButtons from '@/components/movie/WatchButtons.vue'
+import ReviewForm from '@/components/review/ReviewForm.vue'
+import ReviewList from '@/components/review/ReviewList.vue'
 import api from '@/api/axios'
 
-const directors = computed(() =>
-  movie.value?.casts?.filter((c) => c.role === 'director') ?? []
-)
-
-const actors = computed(() =>
-  movie.value?.casts?.filter((c) => c.role === 'actor') ?? []
-)
-const posterSrc = computed(() => {
-  if (!movie.value || !movie.value.poster_url) return ''
-  const url = movie.value.poster_url
-  if (url.startsWith('http')) return url
-  return `http://127.0.0.1:8000${url}`
-})
-
-
-
-const reviewsReloadKey = ref(0)
-const onReviewCreated = () => {
-  reviewsReloadKey.value++
-}
-
-const similarMovies = ref([])
 const route = useRoute()
+
 const movie = ref(null)
+const similarMovies = ref([])
 const loading = ref(true)
 const myRating = ref(0)
 
-onMounted(async () => {
-  try {
-    const id = route.params.id
+const directors = ref([])
+const actors = ref([])
 
+// 포스터 URL 계산
+const posterSrc = computed(() => {
+  if (!movie.value?.poster_url) return ''
+  const url = movie.value.poster_url
+  return url.startsWith('http')
+    ? url
+    : `http://127.0.0.1:8000${url}`
+})
+
+// 영화 가져오기
+const fetchMovie = async (id) => {
+  console.log("📌 Fetch Movie:", id)
+  loading.value = true
+
+  try {
     const res = await api.get(`movies/${id}/`)
+    console.log("📌 API Response movie:", res.data)
+
     movie.value = res.data
 
-    const similarRes = await api.get(`movies/${id}/similar/`)
-    const similarData = similarRes.data
-    const similarList = Array.isArray(similarData)
-      ? similarData
-      : similarData.results ?? []
+    // casts 존재 여부 체크
+    if (!movie.value.casts) {
+      console.warn("⚠ movie.casts 없음!")
+      directors.value = []
+      actors.value = []
+    } else {
+      directors.value = movie.value.casts.filter(c => c.role === 'director')
+      actors.value = movie.value.casts.filter(c => c.role === 'actor')
+    }
 
-    similarMovies.value = similarList
-  } catch (error) {
-    console.error('영화 불러오기 실패:', error)
+    // similar
+    const s = await api.get(`movies/${id}/similar/`)
+    console.log("📌 API Response similar:", s.data)
+
+    similarMovies.value = Array.isArray(s.data) ? s.data : (s.data.results ?? [])
+
+  } catch (err) {
+    console.error("❌ fetchMovie ERROR:", err)
   } finally {
     loading.value = false
   }
+}
+
+onMounted(() => {
+  fetchMovie(route.params.id)
+})
+
+watch(() => route.params.id, (newId, oldId) => {
+  console.log("📌 route changed:", oldId, "→", newId)
+  if (newId) fetchMovie(newId)
 })
 </script>
+
+
+
 
 <style scoped>
 .detail-page {

@@ -1,13 +1,17 @@
 <template>
-  <RouterLink :to="`/movies/${movie.id}`" class="movie-card">
+  <RouterLink
+    :to="{ name: 'movie-detail', params: { id: movie.id } }"
+    class="movie-card"
+  >
     <img :src="posterSrc" alt="포스터" />
-
 
     <div class="overlay">
       <h4>{{ movie.title }}</h4>
       <p>⭐ {{ movie.avg_score ?? '평점 없음' }}</p>
     </div>
   </RouterLink>
+
+
 </template>
 
 <script setup>

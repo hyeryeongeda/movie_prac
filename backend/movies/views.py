@@ -160,7 +160,24 @@ class SimilarMovieAPIView(generics.ListAPIView):
     def get_queryset(self):
         movie_id = self.kwargs['movie_id']
         movie = Movie.objects.get(id=movie_id)
-        return Movie.objects.filter(country=movie.country).exclude(id=movie.id)
+
+        # 1) 장르 기준
+        qs = Movie.objects.filter(
+            genres__in=movie.genres.all()
+        ).exclude(id=movie.id).distinct()
+
+        # 2) 없으면 같은 country
+        if not qs.exists():
+            qs = Movie.objects.filter(
+                country=movie.country
+            ).exclude(id=movie.id)
+
+        # 3) 그것도 없으면 그냥 인기순 몇 개
+        if not qs.exists():
+            qs = Movie.objects.exclude(id=movie.id)
+
+        return qs[:10]
+
 
 
 # ─────────────────────────────────────────────
