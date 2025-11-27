@@ -5,6 +5,8 @@ import MoviesView from '@/views/MoviesView.vue'
 import MovieDetailView from '@/views/MovieDetailView.vue'
 import MyPageView from '@/views/MyPageView.vue'
 import LoginView from '@/views/LoginView.vue'
+import RegisterView from '@/views/RegisterView.vue'
+
 
 const routes = [
   { path: '/', name: 'home', component: HomeView },
@@ -12,6 +14,7 @@ const routes = [
   { path: '/movies/:id', name: 'movie-detail', component: MovieDetailView },
   { path: '/mypage', name: 'mypage', component: MyPageView },
   { path: '/login', name: 'login', component: LoginView },
+  { path: '/register', name: 'Register', component: RegisterView }, 
 ]
 
 

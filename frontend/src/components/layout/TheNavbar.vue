@@ -11,20 +11,21 @@
     <div class="right">
       <span class="icon">🔍</span>
 
-      <!-- 로그인 안 된 상태 -->
+      <!-- 로그인 안 된 상태: access 토큰이 없을 때 -->
       <RouterLink
-        v-if="!auth.isAuthenticated"
+        v-if="!auth.state.access"
         to="/login"
         class="login-link"
       >
         로그인
       </RouterLink>
 
-      <!-- 로그인 된 상태 -->
+      <!-- 로그인 된 상태: access 토큰이 있을 때 -->
       <div v-else class="user-area">
-        <span class="username">{{ auth.state.user?.username }}</span>
+        <span class="username">{{ auth.state.user?.username || '유저' }}</span>
         <button @click="onLogout">로그아웃</button>
       </div>
+
     </div>
   </nav>
 </template>

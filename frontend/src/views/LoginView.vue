@@ -20,6 +20,11 @@
         />
         <button type="submit">로그인</button>
       </form>
+      <!-- ✅ 여기 추가 -->
+      <p class="bottom-text">
+        아직 계정이 없나요?
+        <RouterLink to="/register">회원가입</RouterLink>
+      </p>
 
       <p class="error" v-if="error">{{ error }}</p>
     </div>
@@ -46,6 +51,8 @@ const onSubmit = async () => {
   } catch (e) {
     console.error('로그인 에러:', e)
     error.value = '로그인에 실패했습니다. 아이디/비밀번호를 확인해 주세요.'
+  } finally {
+    loading.value = false
   }
 }
 </script>
@@ -99,5 +106,18 @@ button {
   margin-top: 10px;
   color: #ff8080;
   font-size: 14px;
+}
+
+/* ✅ 회원가입 링크 스타일 */
+.bottom-text {
+  margin-top: 16px;
+  font-size: 13px;
+  color: #cccccc;
+  text-align: center;
+}
+
+.bottom-text a {
+  color: #ffffff;
+  text-decoration: underline;
 }
 </style>

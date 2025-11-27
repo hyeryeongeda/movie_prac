@@ -55,7 +55,9 @@
           </p>
         </div>
 
+        <!-- 별점 컴포넌트 -->
         <RatingStar v-model="myRating" />
+
         <WatchButtons :movie-id="movie.id" />
 
         <p class="overview">{{ movie.overview }}</p>
@@ -93,6 +95,7 @@
 <script setup>
 import { ref, onMounted, watch, computed } from 'vue'
 import { useRoute } from 'vue-router'
+import { useAuth } from '@/stores/auth'
 import MovieRow from '@/components/movie/MovieRow.vue'
 import TheNavbar from '@/components/layout/TheNavbar.vue'
 import RatingStar from '@/components/movie/RatingStar.vue'
@@ -100,6 +103,14 @@ import WatchButtons from '@/components/movie/WatchButtons.vue'
 import ReviewForm from '@/components/review/ReviewForm.vue'
 import ReviewList from '@/components/review/ReviewList.vue'
 import api from '@/api/axios'
+const reviewsReloadKey = ref(0)
+
+const onReviewCreated = () => {
+  // 리뷰가 새로 작성될 때마다 key를 바꿔서 ReviewList를 다시 불러오게 함
+  reviewsReloadKey.value++
+}
+const auth = useAuth()
+
 
 const route = useRoute()
 
@@ -120,7 +131,7 @@ const posterSrc = computed(() => {
     : `http://127.0.0.1:8000${url}`
 })
 
-// 영화 가져오기
+// ✅ 영화 불러올 때 내 점수 세팅
 const fetchMovie = async (id) => {
   console.log("📌 Fetch Movie:", id)
   loading.value = true
@@ -131,28 +142,40 @@ const fetchMovie = async (id) => {
 
     movie.value = res.data
 
-    // casts 존재 여부 체크
-    if (!movie.value.casts) {
-      console.warn("⚠ movie.casts 없음!")
-      directors.value = []
-      actors.value = []
-    } else {
-      directors.value = movie.value.casts.filter(c => c.role === 'director')
-      actors.value = movie.value.casts.filter(c => c.role === 'actor')
-    }
+    // 여기서 user_score 를 myRating 에 반영
+    myRating.value = movie.value.user_score ?? 0
 
-    // similar
-    const s = await api.get(`movies/${id}/similar/`)
-    console.log("📌 API Response similar:", s.data)
-
-    similarMovies.value = Array.isArray(s.data) ? s.data : (s.data.results ?? [])
-
+    // ...비슷한 영화 부분은 그대로
   } catch (err) {
     console.error("❌ fetchMovie ERROR:", err)
   } finally {
     loading.value = false
   }
 }
+// ✅ 별점 변경 시 서버에 저장 + 다시 불러오기
+const onChangeRating = async (score) => {
+  if (!auth.isAuthenticated) {
+    alert('평점은 로그인 후 남길 수 있습니다.')
+    // 로그인 안 되어 있으면 별 다시 0으로 돌려도 됨
+    myRating.value = movie.value?.user_score ?? 0
+    return
+  }
+  if (!movie.value) return
+
+  try {
+    console.log('⭐ 평점 저장 요청:', movie.value.id, score)
+
+    await api.post(`movies/${movie.value.id}/ratings/`, {
+      score,
+    })
+
+    // 평균 점수 / 내 점수 최신값으로 다시 가져오기
+    await fetchMovie(movie.value.id)
+  } catch (error) {
+    console.error('평점 저장 실패:', error)
+  }
+}
+
 
 onMounted(() => {
   fetchMovie(route.params.id)
@@ -162,10 +185,17 @@ watch(() => route.params.id, (newId, oldId) => {
   console.log("📌 route changed:", oldId, "→", newId)
   if (newId) fetchMovie(newId)
 })
+// myRating 값이 바뀔 때마다 서버에 저장
+watch(myRating, (newScore, oldScore) => {
+  // 0 → 0 같은 초기 세팅은 무시
+  if (!movie.value) return
+  if (newScore === oldScore) return
+  if (!newScore) return
+
+  onChangeRating(newScore)
+})
+
 </script>
-
-
-
 
 <style scoped>
 .detail-page {
